@@ -24,7 +24,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // server.ts
 var import_express = __toESM(require("express"), 1);
 var import_http = __toESM(require("http"), 1);
-var import_fs = __toESM(require("fs"), 1);
 var import_ws2 = require("ws");
 var import_vite = require("vite");
 
@@ -552,8 +551,15 @@ var WSDispatcher = class _WSDispatcher {
 var import_url = require("url");
 var import_path = __toESM(require("path"), 1);
 var import_meta = {};
-var __filename = (0, import_url.fileURLToPath)(import_meta.url);
-var __dirname = import_path.default.dirname(__filename);
+var __filename;
+var __dirname;
+try {
+  __filename = (0, import_url.fileURLToPath)(import_meta.url);
+  __dirname = import_path.default.dirname(__filename);
+} catch (e) {
+  __filename = __filename || "";
+  __dirname = __dirname || process.cwd();
+}
 var app = (0, import_express.default)();
 var server = import_http.default.createServer(app);
 app.use(import_express.default.json());
@@ -795,6 +801,7 @@ server.on("upgrade", (request, socket, head) => {
 async function initializeVite() {
   const isProd = process.env.NODE_ENV === "production" || __filename.includes("server.cjs");
   if (!isProd) {
+    console.log("\u{1F6E0}\uFE0F Modo Desarrollo: Cargando Vite Middleware...");
     const vite = await (0, import_vite.createServer)({
       server: {
         middlewareMode: true,
@@ -804,24 +811,21 @@ async function initializeVite() {
     });
     app.use(vite.middlewares);
   } else {
-    let distPath = import_path.default.join(process.cwd(), "dist");
-    if (!import_fs.default.existsSync(import_path.default.join(distPath, "index.html"))) {
-      distPath = __dirname;
-    }
+    console.log("\u{1F4E6} Modo Producci\xF3n: Sirviendo archivos est\xE1ticos desde /dist");
+    const distPath = import_path.default.join(process.cwd(), "dist");
     app.use(import_express.default.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(import_path.default.join(distPath, "index.html"));
     });
   }
 }
-process.env.VITE_ALLOWED_HOSTS = "all";
 var port = Number(process.env.PORT) || 3e3;
 initializeVite().then(() => {
   server.listen(port, "0.0.0.0", () => {
     console.log(`\u{1F680} Servidor en la nube rugiendo en el puerto ${port}`);
   });
 }).catch((err) => {
-  console.error("\u{1F525} Fallo al inicializar Vite:", err);
+  console.error("\u{1F525} Fallo al inicializar:", err);
 });
 process.on("uncaughtException", (err) => console.error("\u{1F525} Error cr\xEDtico de Node:", err));
 process.on("unhandledRejection", (err) => console.error("\u{1F525} Promesa rechazada:", err));

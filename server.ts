@@ -15,8 +15,19 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 
 // Parche de compatibilidad para ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Parche de compatibilidad universal para ES Modules y CommonJS (Empaquetado)
+let __filename: string;
+let __dirname: string;
+
+try {
+  // Si estamos en entorno ES Modules (Local)
+  __filename = fileURLToPath(import.meta.url);
+  __dirname = path.dirname(__filename);
+} catch (e) {
+  // Si estamos en entorno empaquetado CommonJS (Producción en Render)
+  __filename = __filename || '';
+  __dirname = __dirname || process.cwd();
+}
 const app = express();
 const server = http.createServer(app);
 
@@ -306,11 +317,13 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
-// Integrate Vite Middleware
+// Integrate Vite Middleware (Modificado para Producción Real)
 async function initializeVite() {
   const isProd = process.env.NODE_ENV === "production" || __filename.includes("server.cjs");
+  
   if (!isProd) {
-    // PARCHE ESTRUCTURAL: Inyectamos la autorización directa aquí al crear el servidor
+    // Solo levantamos Vite en tu ordenador local
+    console.log("🛠️ Modo Desarrollo: Cargando Vite Middleware...");
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
@@ -320,19 +333,17 @@ async function initializeVite() {
     });
     app.use(vite.middlewares);
   } else {
-    let distPath = path.join(process.cwd(), "dist");
-    if (!fs.existsSync(path.join(distPath, "index.html"))) {
-      distPath = __dirname;
-    }
+    // EN LA NUBE (Render): Servimos los archivos estáticos de forma pura.
+    // ¡Aquí Vite NO se ejecuta, por lo tanto NO puede bloquear nada!
+    console.log("📦 Modo Producción: Sirviendo archivos estáticos desde /dist");
+    const distPath = path.join(process.cwd(), "dist");
+    
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 }
-
-// Fallback de seguridad por si acaso
-process.env.VITE_ALLOWED_HOSTS = 'all';
 
 const port = Number(process.env.PORT) || 3000;
 
@@ -341,7 +352,7 @@ initializeVite().then(() => {
     console.log(`🚀 Servidor en la nube rugiendo en el puerto ${port}`);
   });
 }).catch((err) => {
-  console.error("🔥 Fallo al inicializar Vite:", err);
+  console.error("🔥 Fallo al inicializar:", err);
 });
 
 process.on('uncaughtException', (err) => console.error('🔥 Error crítico de Node:', err));
