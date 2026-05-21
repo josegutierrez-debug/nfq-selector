@@ -12,7 +12,12 @@ import { createServer as createViteServer } from "vite";
 import { SessionManager } from "./managers/sessionManager";
 import { LobbyController } from "./controllers/lobbyController";
 import { WSDispatcher, ClientConnection } from "./events/wsDispatcher";
+import { fileURLToPath } from 'url';
+import path from 'path';
 
+// Parche de compatibilidad para ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 const PORT = 3000;
