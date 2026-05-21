@@ -329,10 +329,18 @@ async function initializeVite() {
   }
 }
 
+// --- INICIO DEL PARCHE DE PRODUCCIÓN ---
+const port = Number(process.env.PORT) || 3000;
+
 initializeVite().then(() => {
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server is running on port ${PORT}`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`🚀 Servidor en la nube rugiendo en el puerto ${port}`);
   });
 }).catch((err) => {
-  console.error("Failed to initialize Vite", err);
+  console.error("🔥 Fallo al inicializar Vite:", err);
 });
+
+// Capturador de errores silenciosos (para evitar que se apague sin avisar)
+process.on('uncaughtException', (err) => console.error('🔥 Error crítico de Node:', err));
+process.on('unhandledRejection', (err) => console.error('🔥 Promesa rechazada:', err));
+// --- FIN DEL PARCHE ---
