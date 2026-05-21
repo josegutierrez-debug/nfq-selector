@@ -5,7 +5,6 @@
 
 import express from "express";
 import http from "http";
-import path from "path";
 import fs from "fs";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer as createViteServer } from "vite";
@@ -20,7 +19,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
-const PORT = 3000;
 
 // Middleware for JSON parsing
 app.use(express.json());
@@ -312,8 +310,12 @@ server.on("upgrade", (request, socket, head) => {
 async function initializeVite() {
   const isProd = process.env.NODE_ENV === "production" || __filename.includes("server.cjs");
   if (!isProd) {
+    // PARCHE ESTRUCTURAL: Inyectamos la autorización directa aquí al crear el servidor
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { 
+        middlewareMode: true,
+        allowedHosts: 'all' 
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -329,7 +331,9 @@ async function initializeVite() {
   }
 }
 
-// --- INICIO DEL PARCHE DE PRODUCCIÓN ---
+// Fallback de seguridad por si acaso
+process.env.VITE_ALLOWED_HOSTS = 'all';
+
 const port = Number(process.env.PORT) || 3000;
 
 initializeVite().then(() => {
@@ -340,7 +344,5 @@ initializeVite().then(() => {
   console.error("🔥 Fallo al inicializar Vite:", err);
 });
 
-// Capturador de errores silenciosos (para evitar que se apague sin avisar)
 process.on('uncaughtException', (err) => console.error('🔥 Error crítico de Node:', err));
 process.on('unhandledRejection', (err) => console.error('🔥 Promesa rechazada:', err));
-// --- FIN DEL PARCHE ---
